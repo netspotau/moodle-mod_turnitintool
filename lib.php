@@ -4908,9 +4908,16 @@ function turnitintool_view_submission_form($cm,$turnitintool,$submissionid=NULL)
                 if (count($cansubmit)>0) {
                     $cells[1]->data='<select name="userid" id="userid" onchange="updateSubForm(submissionArray,stringsArray,this.form,'.$turnitintool->reportgenspeed.')">';
 
+                    // ignore admins, we don't want to submit as them
+                    $submitusers = get_users_by_capability($context, 'mod/turnitintool:submit', 'u.id', '', '', '', '', '', false);
+                    $submituserids = array();
+                    foreach ($submitusers as $user) {
+                        $submituserids[$user->id] = true;
+                    }
+
                     foreach ($cansubmit as $courseuser) {
                         // Filter Guest users, admins and grader users
-                        if (has_capability('mod/turnitintool:submit',$context, $courseuser->id, false)) {
+                        if (isset($submituserids[$courseuser->id]) && $submituserids[$courseuser->id] === true) {
 
                             if (!is_null($param_userid) AND $param_userid==$courseuser->id) {
                                 $selected=' selected';
