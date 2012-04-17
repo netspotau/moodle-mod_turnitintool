@@ -6121,7 +6121,7 @@ function turnitintool_buildgrades($turnitintool,$thisuser) {
     if ($submissions=turnitintool_get_records_select('turnitintool_submissions','turnitintoolid='.$turnitintool->id.' AND userid='.$thisuser->id.' AND submission_unanon=1')) {
         $grades = new stdClass();
         $grades->userid = $thisuser->id;
-        $gradearray=turnitintool_grades($turnitintool->id);
+        $gradearray=turnitintool_grades($turnitintool->id, $thisuser);
 
         if ($turnitintool->grade < 0) {
             //Using a scale
@@ -6142,9 +6142,14 @@ function turnitintool_buildgrades($turnitintool,$thisuser) {
  * @param var $turnitintoolid The turnitintool id for this activity
  * @return object Returns a Grade Object
  */
-function turnitintool_grades($turnitintoolid) {
+function turnitintool_grades($turnitintoolid, $user = null) {
     $return=false;
-    if ($submissions=turnitintool_get_records_select('turnitintool_submissions','turnitintoolid='.$turnitintoolid.' AND submission_unanon=1')) {
+    $select = "turnitintoolid=$turnitintoolid AND submission_unanon=1";
+    if ($user !== null && isset($user->id)) {
+        $select .= " AND userid = {$user->id}";
+    }
+
+    if ($submissions=turnitintool_get_records_select('turnitintool_submissions',$select)) {
         $turnitintool=turnitintool_get_record('turnitintool','id',$turnitintoolid);
         $parts=turnitintool_get_records_select('turnitintool_parts',"turnitintoolid=".$turnitintoolid." AND deleted=0","dtpost DESC");
         $partsarray=array_keys($parts);
