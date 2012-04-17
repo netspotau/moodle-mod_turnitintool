@@ -9,7 +9,7 @@
     require_once($CFG->libdir.'/adminlib.php');
     require_once($CFG->libdir.'/tablelib.php');
     require_once("lib.php");
-    
+
     if (!is_callable('groups_get_activity_group')) {
         $adminroot = admin_get_root();
         admin_externalpage_setup('managemodules',$adminroot);
@@ -17,9 +17,13 @@
         admin_externalpage_setup('managemodules');
     }
 
-    if (isset($PAGE) AND is_callable(array($PAGE, 'requires', 'css'))) { // Are we using new moodle or old?
+    if (isset($PAGE) AND @is_callable(array($PAGE->requires, 'js'))) { // Are we using new moodle or old?
+        $jsurl = new moodle_url($CFG->wwwroot.'/mod/turnitintool/turnitintool.js');
+        $PAGE->requires->js($jsurl,true);
         $cssurl = new moodle_url($CFG->wwwroot.'/mod/turnitintool/styles.css');
         $PAGE->requires->css($cssurl);
+    } else {
+        require_js($CFG->wwwroot.'/mod/turnitintool/turnitintool.js');
     }
 
     $a  = optional_param('a', 0, PARAM_INT);  // turnitintool ID
@@ -33,45 +37,52 @@
 
 /// Print the main part of the page
     $param_do=optional_param('do',null,PARAM_CLEAN);
-    $param_userlinks=optional_param('userlinks',null,PARAM_CLEAN);
-    
-    if (!is_null($param_do) AND $param_do!="unlinkusers") {
+    $param_unlink=optional_param('unlink',null,PARAM_CLEAN);
+    $param_relink=optional_param('relink',null,PARAM_CLEAN);
+    $param_filedate=optional_param('filedate',null,PARAM_CLEAN);
+
+    $post["userlinks"] = isset( $_REQUEST['userlinks'] ) ? $_REQUEST["userlinks"] : array();
+    foreach ( $post["userlinks"] as $key => $value ) {
+        $param_userlinks[$key] = clean_param( $value, PARAM_INT );
+    }
+
+    if (!is_null($param_do) AND ( $param_do=="viewreport" OR $param_do=="savereport" ) ) {
         if ($param_do=='viewreport') {
             echo '<pre>';
             echo "====== Turnitintool Data Dump Output ======
 
 ";
         } else if ($param_do=='savereport') {
-        
+
             $filename='tii_datadump_'.$CFG->turnitin_account_id.'_'.date('dmYhm',time()).'.txt';
             header('Content-type: text/plain');
             header('Content-Disposition: attachment; filename="'.$filename.'"');
 
-        
+
             echo "====== Turnitintool Data Dump File ======
 
 ";
         }
-        
+
         $tables = array('turnitintool_users','turnitintool_courses','turnitintool','turnitintool_parts','turnitintool_submissions');
-        
+
         foreach ($tables as $table) {
-        
+
             echo "== ".$table." ==
 ";
-            
+
             if ($data=turnitintool_get_records($table)) {
-            
+
                 $headers=array_keys(get_object_vars(current($data)));
                 $columnwidth=25;
-                
+
                 echo str_pad('',(($columnwidth+2)*count($headers)),"=");
                 if ($table=='turnitintool_users') {
                     echo str_pad('',$columnwidth+2,"=");
                 }
                 echo "
 ";
-                
+
                 foreach ($headers as $header) {
                     echo ' '.str_pad($header,$columnwidth," ",1).'|';
                 }
@@ -80,14 +91,14 @@
                 }
                 echo "
 ";
-                
+
                 echo str_pad('',(($columnwidth+2)*count($headers)),"=");
                 if ($table=='turnitintool_users') {
                     echo str_pad('',$columnwidth+2,"=");
                 }
                 echo "
 ";
-                
+
                 foreach ($data as $datarow) {
                     $datarow=get_object_vars($datarow);
                     foreach ($datarow as $datacell) {
@@ -105,56 +116,79 @@
                     echo str_pad('',$columnwidth+2,"-");
                 }
                 echo "
-                
+
 ";
             } else {
                 echo get_string('notavailableyet','turnitintool')."
 ";
             }
-        
+
         }
-        
+
         if ($param_do=='viewreport') {
             echo "</pre>";
         }
     } else if (!is_null($param_do) AND $param_do=="unlinkusers") {
-    
-        if (!is_null($param_userlinks) AND count($param_userlinks)>0) {
+
+        if (!is_null($param_unlink) AND isset($param_userlinks) AND count($param_userlinks)>0) {
             foreach ($param_userlinks as $userlink) {
-                turnitintool_delete_records('turnitintool_users','userid',$userlink);
+                $user = new stdClass();
+                $user->id = $userlink;
+                if ( $tuser = turnitintool_get_record('turnitintool_users','id',$userlink) AND $muser = turnitintool_get_record('user','id',$tuser->userid) ) {
+                    $user->turnitin_uid = 0;
+                    turnitintool_update_record('turnitintool_users',$user);
+                } else {
+                    turnitintool_delete_records('turnitintool_users','id',$userlink);
+                }
             }
         }
-        
+
+        if (!is_null($param_relink) AND isset($param_userlinks) AND count($param_userlinks)>0) {
+            $loaderbar = new turnitintool_loaderbarclass(count($param_userlinks));
+            foreach ($param_userlinks as $userlink) {
+                if ( $tuser = turnitintool_get_record('turnitintool_users','id',$userlink) AND $muser = turnitintool_get_record('user','id',$tuser->userid) ) {
+                    if ( empty( $muser->email ) OR strpos( $muser->email, '@' ) === false ) {
+                        $split=explode('.',$muser->username);
+                        array_pop($split);
+                        $muser->email=join('.',$split);
+                    }
+                    $tii = new turnitintool_commclass(null,$muser->firstname,$muser->lastname,$muser->email,1,$loaderbar);
+                    $tii->createUser($post,get_string('userprocess','turnitintool'));
+                    $user = new stdClass();
+                    $user->id = $userlink;
+                    $user->turnitin_uid = ( $tii->getRerror() ) ? 0 : $tii->getUserID();
+                    turnitintool_update_record('turnitintool_users',$user);
+                    unset($tii);
+                } else {
+                    turnitintool_delete_records('turnitintool_users','id',$userlink);
+                }
+            }
+            unset($loader);
+            turnitintool_redirect($CFG->wwwroot.'/mod/turnitintool/extras.php?do=unlinkusers');
+        }
+
         turnitintool_header(NULL,NULL,$_SERVER["REQUEST_URI"],get_string("modulenameplural", "turnitintool"), $SITE->fullname);
 
         echo '<div id="turnitintool_style">';
 
         turnitintool_box_start('generalbox boxwidthwide boxaligncenter', 'general');
-        
-        echo '<b>'.get_string('unlinkusers','turnitintool').'</b><br />';
-        echo '<p>'.get_string('unlinkinfo','turnitintool').'</p>';
-        
-        echo '<form method="POST" action="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=unlinkusers">
+
+        echo '<b>'.get_string('unlinkrelinkusers','turnitintool').'</b><br /><br />';
+
+        echo '<form method="POST" id="turnitin_unlink" action="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=unlinkusers"><div style="height: 400px;overflow: auto;">
 ';
-        
-        $table->width='100%';
-        $table->tablealign='center';
-        $table->id='unlink';
-        $table->class='uploadtable';
-        
-        unset($cells);
-        $cells[0]->class='cell c0';
-        $cells[0]->data=get_string('userstounlink', 'turnitintool');
-        
+
         if ($userrows=turnitintool_get_records('turnitintool_users')) {
-            $output='<select multiple="multiple" size="20" name="userlinks[]">';
+
             foreach ($userrows as $userdata) {
                 if (!$user=turnitintool_get_record('user','id',$userdata->userid)) {
-                    $user->id = $userdata->userid;
+                    $user->id = $user->userid;
                     $user->lastname = get_string('nonmoodleuser','turnitintool');
                     $user->firstname = '';
                     $user->email = get_string('notavailableyet','turnitintool');
                 }
+                $user->turnitin_uid = $userdata->turnitin_uid;
+                $user->linkid = $userdata->id;
                 $userarray[]=$user;
             }
             $lastname=array();
@@ -162,48 +196,117 @@
             foreach ($userarray as $key => $row) {
                 $lastname[$key]  = $row->lastname;
             }
+
+            $table->width='100%';
+            $table->tablealign='center';
+            $table->id='unlink';
+            $table->class='submissionTable';
+
+            unset($cells);
+            $cells[0]->class = 'header c0 iconcell';
+            $cells[0]->data = '<input type="checkbox" name="toggle" onclick="checkUncheckAll(this,\'userlinks\','.count($userarray).')" />';
+            $cells[1]->class = 'header c1 markscell';
+            $cells[1]->data = get_string( 'turnitinid', 'turnitintool' );
+            $cells[2]->class = 'header c2';
+            $cells[2]->data = get_string( 'usersunlinkrelink', 'turnitintool' );
+
+            $table->rows[0]->cells=$cells;
+
             array_multisort($lastname, SORT_ASC, $userarray);
+            $i = 0;
             foreach ($userarray as $user) {
-                $output.='<option label="'.$user->lastname.', '.$user->firstname.' ('.$user->email.')" value="'.$user->id.'">'.$user->lastname.', '.$user->firstname.' ('.$user->email.')</option>
-';
+                unset($cells);
+                $cells[0]->class = 'cell c0 iconcell';
+                $cells[0]->data = '<input type="checkbox" id="userlinks_'.$i.'" name="userlinks[]" value="'.$user->linkid.'" />';
+                $cells[1]->class = 'cell c1 markscell';
+                $cells[1]->data = ( $user->turnitin_uid > 0 ) ? $user->turnitin_uid : null;
+                $cells[2]->class = 'cell c2';
+                $cells[2]->data = ( !empty($user->firstname) ) ? '<a href="'.$CFG->wwwroot.'/user/view.php?id='.$user->id.'">' : '';
+                $cells[2]->data .= $user->lastname.', '.$user->firstname;
+                $cells[2]->data .= ( !empty($user->firstname) ) ? '</a>' : '';
+                $cells[2]->data .=' ('.$user->email.')';
+                $i++;
+                $table->rows[$i]->class='row r' . (($i%2) ? 0 : 1);
+                $table->rows[$i]->cells=$cells;
             }
 
-            $output.='</select><br />
-            <input style="margin-top: 7px;" value="Unlink Users" type="submit" />';
-        } else {
-            $output='No Users Currently Linked';
+            turnitintool_print_table($table);
+
         }
 
-        $cells[1]->class='cell c1';
-        $cells[1]->data=$output;
-        $table->rows[]->cells=$cells;
-        
-        turnitintool_print_table($table);
-        
-        echo '</form>
+        echo '</div><input style="margin-top: 7px;" name="unlink" value="Unlink Users" type="submit" /> <input style="margin-top: 7px;" name="relink" value="Relink Users" type="submit" /></form>
 ';
-        
+
         turnitintool_box_end();
-        
+
         echo '</div>';
 
         turnitintool_footer();
+    } else if ( !is_null($param_do) AND ( $param_do=="commslog" OR $param_do=="activitylog" ) ) {
+
+        $logsdir = $CFG->dataroot . "/temp/turnitintool/logs/";
+        $savefile = $param_do.'_'.$param_filedate.'.log';
+
+        if ( !is_null( $param_filedate ) ) {
+
+            header("Content-type: plain/text; charset=UTF-8");
+            send_file( $logsdir.$savefile, $savefile, false );
+
+        } else {
+
+            turnitintool_header(NULL,NULL,$_SERVER["REQUEST_URI"],get_string("modulenameplural", "turnitintool"), $SITE->fullname);
+            turnitintool_box_start('generalbox boxwidthwide boxaligncenter', 'general');
+
+            $label = 'commslog';
+            $tabs[] = new tabobject( $label, $CFG->wwwroot.'/mod/turnitintool/extras.php?do='.$label,
+                ucfirst( $label ), ucfirst( $label ), false );
+            $label = 'activitylog';
+            $tabs[] = new tabobject( $label, $CFG->wwwroot.'/mod/turnitintool/extras.php?do='.$label,
+                ucfirst( $label ), ucfirst( $label ), false );
+            $inactive = array( $param_do );
+            $selected = $param_do;
+            print_tabs( array( $tabs ), $selected, $inactive );
+
+            if ( file_exists( $logsdir ) AND $readdir = opendir( $logsdir ) ) {
+                $output = '';
+                while ( false !== ( $entry = readdir( $readdir ) ) ) {
+                    if ( substr_count( $entry, $param_do ) > 0 ) {
+                        $date = str_replace( '.log', '', array_pop( split( '_', $entry ) ) );
+                        $year = substr( $date, 0, 4 );
+                        $month = substr( $date, 4, 2 );
+                        $day = substr( $date, 6, 2 );
+                        $output .= '<a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=' . $param_do . '&filedate=' . $date . '">' . ucfirst($param_do) . ' (' . userdate( strtotime( $year . '-' . $month . '-' . $day ), '%Y-%m-%d %H:%M:%S' ) . ')</a><br />'.PHP_EOL;
+                    }
+                }
+                echo $output;
+            } else {
+                echo get_string("nologsfound");
+            }
+
+            echo "<br />";
+
+            turnitintool_box_end();
+            turnitintool_footer();
+
+        }
+
     } else {
-        
+
+        $post = new stdClass();
         $post->utp='2';
-        
+
         $loaderbar = new turnitintool_loaderbarclass(3);
         $tii = new turnitintool_commclass(turnitintool_getUID($USER),$USER->firstname,$USER->lastname,$USER->email,2,$loaderbar);
-	$tii->startSession();
-        
-	$result=$tii->createUser($post,get_string('connecttesting','turnitintool'));
- 
+        $tii->startSession();
+
+        $result=$tii->createUser($post,get_string('connecttesting','turnitintool'));
+
         $rcode=$tii->getRcode();
         $rmessage=$tii->getRmessage();
-	$tiiuid=$tii->getUserID();
-		
-	$tii->endSession();
-        
+        $tiiuid=$tii->getUserID();
+
+        $tii->endSession();
+
         turnitintool_header(NULL,NULL,$_SERVER["REQUEST_URI"],get_string("modulenameplural", "turnitintool"), $SITE->fullname);
         turnitintool_box_start('generalbox boxwidthwide boxaligncenter', 'general');
         if ($rcode>=API_ERROR_START OR empty($rcode)) {
@@ -225,7 +328,7 @@
         }
         turnitintool_box_end();
         turnitintool_footer();
-        
+
     }
 
 /* ?> */

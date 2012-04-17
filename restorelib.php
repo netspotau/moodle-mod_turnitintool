@@ -2,205 +2,205 @@
 
 function turnitintool_restore_mods($mod,$restore) {
 
-	global $CFG, $DB;
-	$status = true;
-	$data = backup_getid($restore->backup_unique_code,$mod->modtype,$mod->id);
+    global $CFG, $DB;
+    $status = true;
+    $data = backup_getid($restore->backup_unique_code,$mod->modtype,$mod->id);
 
-	if ($data) {
+    if ($data) {
 
-		$info = $data->info;
+        $info = $data->info;
 
-		// Recreate the turnitintool_course entries
-		$course->id = backup_todb($info['MOD']['#']['COURSE']['0']['#']['ID']['0']['#']);
-		$course->courseid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['COURSEID']['0']['#']);
-		$course->ownerid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERID']['0']['#']);
-		$course->turnitin_ctl = backup_todb($info['MOD']['#']['COURSE']['0']['#']['TURNITIN_CTL']['0']['#']);
-		$course->turnitin_cid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['TURNITIN_CID']['0']['#']);
-		$course->ownertiiuid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERTIIUID']['0']['#']);
-		$course->ownerfn = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERFN']['0']['#']);
-		$course->ownerln = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERLN']['0']['#']);
-		$course->ownerun = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERUN']['0']['#']);
-		$course->owneremail = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNEREMAIL']['0']['#']);
+        // Recreate the turnitintool_course entries
+        $course->id = backup_todb($info['MOD']['#']['COURSE']['0']['#']['ID']['0']['#']);
+        $course->courseid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['COURSEID']['0']['#']);
+        $course->ownerid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERID']['0']['#']);
+        $course->turnitin_ctl = backup_todb($info['MOD']['#']['COURSE']['0']['#']['TURNITIN_CTL']['0']['#']);
+        $course->turnitin_cid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['TURNITIN_CID']['0']['#']);
+        $course->ownertiiuid = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERTIIUID']['0']['#']);
+        $course->ownerfn = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERFN']['0']['#']);
+        $course->ownerln = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERLN']['0']['#']);
+        $course->ownerun = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNERUN']['0']['#']);
+        $course->owneremail = backup_todb($info['MOD']['#']['COURSE']['0']['#']['OWNEREMAIL']['0']['#']);
 
-		$tiicourseid = $course->turnitin_cid;
-		// Determine if the destination course already has a TII Class associated, add check to determine the database call to enable backward compatibility
-		// if it does is it the same class as the one we are restoring
-		if (is_callable(array($DB,'get_records_select'))) {
-			$tiicourses = $DB->get_records_select('turnitintool_courses', 'turnitin_cid='.$tiicourseid.' OR courseid='.$restore->course_id, null, "courseid", "id,courseid,turnitin_cid");
-		} else {
-			$tiicourses = get_records_select('turnitintool_courses','turnitin_cid='.$tiicourseid.' OR courseid='.$restore->course_id, "courseid", "id,courseid,turnitin_cid");
-		}
-		$tiicourses = (!$tiicourses) ? array() : $tiicourses;
+        $tiicourseid = $course->turnitin_cid;
+        // Determine if the destination course already has a TII Class associated, add check to determine the database call to enable backward compatibility
+        // if it does is it the same class as the one we are restoring
+        if (is_callable(array($DB,'get_records_select'))) {
+            $tiicourses = $DB->get_records_select('turnitintool_courses', 'turnitin_cid='.$tiicourseid.' OR courseid='.$restore->course_id, null, "courseid", "id,courseid,turnitin_cid");
+        } else {
+            $tiicourses = get_records_select('turnitintool_courses','turnitin_cid='.$tiicourseid.' OR courseid='.$restore->course_id, "courseid", "id,courseid,turnitin_cid");
+        }
+        $tiicourses = (!$tiicourses) ? array() : $tiicourses;
 
-		$backupaccountid=$info['MOD']['#']['TIIACCOUNT']['0']['#'];
-		if ($CFG->turnitin_account_id!=$backupaccountid) {
-			if (!defined('RESTORE_SILENTLY')) {
-				// Course Error
-				$input->current=(!empty($CFG->turnitin_account_id)) ? $CFG->turnitin_account_id : '('.get_string("notavailableyet","turnitintool").')';
-				$input->backupid=$backupaccountid;
-				echo "<li class=\"error\">".get_string("modulename","turnitintool")." : ".get_string("wrongaccountid","turnitintool",$input)."\"</li>";
-			}
-			return true; // Don't exit restore on failure...
-		}
+        $backupaccountid=$info['MOD']['#']['TIIACCOUNT']['0']['#'];
+        if ($CFG->turnitin_account_id!=$backupaccountid) {
+            if (!defined('RESTORE_SILENTLY')) {
+                // Course Error
+                $input->current=(!empty($CFG->turnitin_account_id)) ? $CFG->turnitin_account_id : '('.get_string("notavailableyet","turnitintool").')';
+                $input->backupid=$backupaccountid;
+                echo "<li class=\"error\">".get_string("modulename","turnitintool")." : ".get_string("wrongaccountid","turnitintool",$input)."\"</li>";
+            }
+            return true; // Don't exit restore on failure...
+        }
 
-		$restorable=true;
-		$thiscourse=false;
-		foreach ($tiicourses as $tiicourse) {
-			if (($tiicourse->turnitin_cid==$tiicourseid AND $tiicourse->courseid!=$restore->course_id)
-			OR
-			($tiicourse->turnitin_cid!=$tiicourseid AND $tiicourse->courseid==$restore->course_id)) {
-				// If the Turnitin Class ID exists against a course already
-				// and that course is not the course we are restoring to then do not restore
-				$restorable=false;
-			} else if ($tiicourse->courseid==$restore->course_id) {
-				$thiscourse=true;
-			}
-		}
+        $restorable=true;
+        $thiscourse=false;
+        foreach ($tiicourses as $tiicourse) {
+            if (($tiicourse->turnitin_cid==$tiicourseid AND $tiicourse->courseid!=$restore->course_id)
+            OR
+            ($tiicourse->turnitin_cid!=$tiicourseid AND $tiicourse->courseid==$restore->course_id)) {
+                // If the Turnitin Class ID exists against a course already
+                // and that course is not the course we are restoring to then do not restore
+                $restorable=false;
+            } else if ($tiicourse->courseid==$restore->course_id) {
+                $thiscourse=true;
+            }
+        }
 
-		// If the course class connection does not already exist OR if it does it is linked to this host course
-		$insertcourse->courseid=$restore->course_id;
+        // If the course class connection does not already exist OR if it does it is linked to this host course
+        $insertcourse->courseid=$restore->course_id;
 
-		// If the owner had been deleted before back up then
-		// the username email address thing will have happened
-		$owneremail = (empty($course->owneremail)) ? join(array_splice(explode(".",$course->ownerun),0,-1)) : $course->owneremail;
+        // If the owner had been deleted before back up then
+        // the username email address thing will have happened
+        $owneremail = (empty($course->owneremail)) ? join(array_splice(explode(".",$course->ownerun),0,-1)) : $course->owneremail;
 
-		if (is_callable(array($DB,'get_records'))) {
-			$owner = $DB->get_record('user', array('email'=>$owneremail));
-		} else {
-			$owner = get_record('user','email',$owneremail);
-		}
-		if ($owner) {
-			$insertcourse->ownerid=$owner->id;
-		} else { // Turnitin class owner not found from email address etc create user account
-			$newuser=false;
-			$i=0;
-			while (!$newuser) {
-				// Keep trying to create a new username
-				$username = ($i==0) ? $course->ownerun : $course->ownerun.'_'.$i; // Append number if username exists
-				$i++;
-				$newuser = create_user_record($username,substr(rand(0,9).'_'.md5($course->ownerun),0,8));
-				$newuser->email = $owneremail;
-				$newuser->firstname = $course->ownerfn;
-				$newuser->lastname = $course->ownerln;
-				if (is_callable(array($DB,'update_record'))) {
-					$DB->update_record("turnitintool_courses",$newuser);
-				} else {
-					update_record("turnitintool_courses",$newuser);
-				}
-			}
-			$insertcourse->ownerid=$newuser->id;
-		}
-		$insertcourse->turnitin_ctl = $course->turnitin_ctl;
-		$insertcourse->turnitin_cid = $course->turnitin_cid;
+        if (is_callable(array($DB,'get_records'))) {
+            $owner = $DB->get_record('user', array('email'=>$owneremail));
+        } else {
+            $owner = get_record('user','email',$owneremail);
+        }
+        if ($owner) {
+            $insertcourse->ownerid=$owner->id;
+        } else { // Turnitin class owner not found from email address etc create user account
+            $newuser=false;
+            $i=0;
+            while (!$newuser) {
+                // Keep trying to create a new username
+                $username = ($i==0) ? $course->ownerun : $course->ownerun.'_'.$i; // Append number if username exists
+                $i++;
+                $newuser = create_user_record($username,substr(rand(0,9).'_'.md5($course->ownerun),0,8));
+                $newuser->email = $owneremail;
+                $newuser->firstname = $course->ownerfn;
+                $newuser->lastname = $course->ownerln;
+                if (is_callable(array($DB,'update_record'))) {
+                    $DB->update_record("turnitintool_courses",$newuser);
+                } else {
+                    update_record("turnitintool_courses",$newuser);
+                }
+            }
+            $insertcourse->ownerid=$newuser->id;
+        }
+        $insertcourse->turnitin_ctl = $course->turnitin_ctl;
+        $insertcourse->turnitin_cid = $course->turnitin_cid;
 
-		if (is_callable(array($DB,'insert_record')) AND !$thiscourse) {
-			$DB->insert_record("turnitintool_courses",$insertcourse);
-		} else if (!$thiscourse) {
-			insert_record("turnitintool_courses",$insertcourse);
-		}
+        if (is_callable(array($DB,'insert_record')) AND !$thiscourse) {
+            $DB->insert_record("turnitintool_courses",$insertcourse);
+        } else if (!$thiscourse) {
+            insert_record("turnitintool_courses",$insertcourse);
+        }
 
 
-		if ($restore->course_startdateoffset) {
-			restore_log_date_changes(get_string('modulename','turnitintool'), $restore, $info['MOD']['#'], array('TIMEDUE', 'TIMEAVAILABLE'));
-		}
+        if ($restore->course_startdateoffset) {
+            restore_log_date_changes(get_string('modulename','turnitintool'), $restore, $info['MOD']['#'], array('TIMEDUE', 'TIMEAVAILABLE'));
+        }
 
-		$turnitintool->course = $restore->course_id;
-		$turnitintool->name = backup_todb($info['MOD']['#']['NAME']['0']['#']);
-		$turnitintool->grade = backup_todb($info['MOD']['#']['GRADE']['0']['#']);
-		$turnitintool->numparts = backup_todb($info['MOD']['#']['NUMPARTS']['0']['#']);
-		$turnitintool->defaultdtstart = backup_todb($info['MOD']['#']['DEFAULTDTSTART']['0']['#']);
-		$turnitintool->defaultdtdue = backup_todb($info['MOD']['#']['DEFAULTDTDUE']['0']['#']);
-		$turnitintool->defaultdtpost = backup_todb($info['MOD']['#']['DEFAULTDTPOST']['0']['#']);
-		$turnitintool->anon = backup_todb($info['MOD']['#']['ANON']['0']['#']);
-		$turnitintool->portfolio = backup_todb($info['MOD']['#']['PORTFOLIO']['0']['#']);
-		$turnitintool->allowlate = backup_todb($info['MOD']['#']['ALLOWLATE']['0']['#']);
-		$turnitintool->reportgenspeed = backup_todb($info['MOD']['#']['REPORTGENSPEED']['0']['#']);
-		$turnitintool->submitpapersto = backup_todb($info['MOD']['#']['SUBMITPAPERSTO']['0']['#']);
-		$turnitintool->spapercheck = backup_todb($info['MOD']['#']['SPAPERCHECK']['0']['#']);
-		$turnitintool->internetcheck = backup_todb($info['MOD']['#']['INTERNETCHECK']['0']['#']);
-		$turnitintool->journalcheck = backup_todb($info['MOD']['#']['JOURNALCHECK']['0']['#']);
-		$turnitintool->maxfilesize = backup_todb($info['MOD']['#']['MAXFILESIZE']['0']['#']);
-		$turnitintool->intro = backup_todb($info['MOD']['#']['INTRO']['0']['#']);
-		$turnitintool->introformat = backup_todb($info['MOD']['#']['INTROFORMAT']['0']['#']);
-		$turnitintool->timecreated = backup_todb($info['MOD']['#']['TIMECREATED']['0']['#']);
-		$turnitintool->timemodified = backup_todb($info['MOD']['#']['TIMEMODIFIED']['0']['#']);
-		$turnitintool->studentreports = backup_todb($info['MOD']['#']['STUDENTREPORTS']['0']['#']);
-		$turnitintool->dateformat = backup_todb($info['MOD']['#']['DATEFORMAT']['0']['#']);
-		$turnitintool->usegrademark = backup_todb($info['MOD']['#']['USEGRADEMARK']['0']['#']);
-		$turnitintool->gradedisplay = backup_todb($info['MOD']['#']['GRADEDISPLAY']['0']['#']);
-		$turnitintool->autoupdates = backup_todb($info['MOD']['#']['AUTOUPDATES']['0']['#']);
-		$turnitintool->commentedittime = backup_todb($info['MOD']['#']['COMMENTEDITTIME']['0']['#']);
-		$turnitintool->commentmaxsize = backup_todb($info['MOD']['#']['COMMENTMAXSIZE']['0']['#']);
-		$turnitintool->autosubmission = backup_todb($info['MOD']['#']['AUTOSUBMISSION']['0']['#']);
-		$turnitintool->shownonsubmission = backup_todb($info['MOD']['#']['SHOWNONSUBMISSION']['0']['#']);
+        $turnitintool->course = $restore->course_id;
+        $turnitintool->name = backup_todb($info['MOD']['#']['NAME']['0']['#']);
+        $turnitintool->grade = backup_todb($info['MOD']['#']['GRADE']['0']['#']);
+        $turnitintool->numparts = backup_todb($info['MOD']['#']['NUMPARTS']['0']['#']);
+        $turnitintool->defaultdtstart = backup_todb($info['MOD']['#']['DEFAULTDTSTART']['0']['#']);
+        $turnitintool->defaultdtdue = backup_todb($info['MOD']['#']['DEFAULTDTDUE']['0']['#']);
+        $turnitintool->defaultdtpost = backup_todb($info['MOD']['#']['DEFAULTDTPOST']['0']['#']);
+        $turnitintool->anon = backup_todb($info['MOD']['#']['ANON']['0']['#']);
+        $turnitintool->portfolio = backup_todb($info['MOD']['#']['PORTFOLIO']['0']['#']);
+        $turnitintool->allowlate = backup_todb($info['MOD']['#']['ALLOWLATE']['0']['#']);
+        $turnitintool->reportgenspeed = backup_todb($info['MOD']['#']['REPORTGENSPEED']['0']['#']);
+        $turnitintool->submitpapersto = backup_todb($info['MOD']['#']['SUBMITPAPERSTO']['0']['#']);
+        $turnitintool->spapercheck = backup_todb($info['MOD']['#']['SPAPERCHECK']['0']['#']);
+        $turnitintool->internetcheck = backup_todb($info['MOD']['#']['INTERNETCHECK']['0']['#']);
+        $turnitintool->journalcheck = backup_todb($info['MOD']['#']['JOURNALCHECK']['0']['#']);
+        $turnitintool->maxfilesize = backup_todb($info['MOD']['#']['MAXFILESIZE']['0']['#']);
+        $turnitintool->intro = backup_todb($info['MOD']['#']['INTRO']['0']['#']);
+        $turnitintool->introformat = backup_todb($info['MOD']['#']['INTROFORMAT']['0']['#']);
+        $turnitintool->timecreated = backup_todb($info['MOD']['#']['TIMECREATED']['0']['#']);
+        $turnitintool->timemodified = backup_todb($info['MOD']['#']['TIMEMODIFIED']['0']['#']);
+        $turnitintool->studentreports = backup_todb($info['MOD']['#']['STUDENTREPORTS']['0']['#']);
+        $turnitintool->dateformat = backup_todb($info['MOD']['#']['DATEFORMAT']['0']['#']);
+        $turnitintool->usegrademark = backup_todb($info['MOD']['#']['USEGRADEMARK']['0']['#']);
+        $turnitintool->gradedisplay = backup_todb($info['MOD']['#']['GRADEDISPLAY']['0']['#']);
+        $turnitintool->autoupdates = backup_todb($info['MOD']['#']['AUTOUPDATES']['0']['#']);
+        $turnitintool->commentedittime = backup_todb($info['MOD']['#']['COMMENTEDITTIME']['0']['#']);
+        $turnitintool->commentmaxsize = backup_todb($info['MOD']['#']['COMMENTMAXSIZE']['0']['#']);
+        $turnitintool->autosubmission = backup_todb($info['MOD']['#']['AUTOSUBMISSION']['0']['#']);
+        $turnitintool->shownonsubmission = backup_todb($info['MOD']['#']['SHOWNONSUBMISSION']['0']['#']);
 
-		// Add exclude small matches data if present in backup file
-		if (isset($info['MOD']['#']['EXCLUDEBIBLIO']['0']['#'])) {
-			$turnitintool->excludebiblio = backup_todb($info['MOD']['#']['EXCLUDEBIBLIO']['0']['#']);
-			$turnitintool->excludequoted = backup_todb($info['MOD']['#']['EXCLUDEQUOTED']['0']['#']);
-			$turnitintool->excludevalue = backup_todb($info['MOD']['#']['EXCLUDEVALUE']['0']['#']);
-			$turnitintool->excludetype = backup_todb($info['MOD']['#']['EXCLUDETYPE']['0']['#']);
-		}
-		
-		// Add exclude small matches data if present in backup file
-		if (isset($info['MOD']['#']['ERATER']['0']['#'])) {
-			$turnitintool->erater = backup_todb($info['MOD']['#']['ERATER']['0']['#']);
-			$turnitintool->erater_handbook = backup_todb($info['MOD']['#']['ERATERHANDBOOK']['0']['#']);
-			$turnitintool->erater_dictionary = backup_todb($info['MOD']['#']['ERATERDICTIONARY']['0']['#']);
-			$turnitintool->erater_spelling = backup_todb($info['MOD']['#']['ERATERSPELLING']['0']['#']);
-			$turnitintool->erater_grammar = backup_todb($info['MOD']['#']['ERATERGRAMMAR']['0']['#']);
-			$turnitintool->erater_usage = backup_todb($info['MOD']['#']['ERATERUSAGE']['0']['#']);
-			$turnitintool->erater_mechanics = backup_todb($info['MOD']['#']['ERATERMECHANICS']['0']['#']);
-			$turnitintool->erater_style = backup_todb($info['MOD']['#']['ERATERSTYLE']['0']['#']);
-		}
+        // Add exclude small matches data if present in backup file
+        if (isset($info['MOD']['#']['EXCLUDEBIBLIO']['0']['#'])) {
+            $turnitintool->excludebiblio = backup_todb($info['MOD']['#']['EXCLUDEBIBLIO']['0']['#']);
+            $turnitintool->excludequoted = backup_todb($info['MOD']['#']['EXCLUDEQUOTED']['0']['#']);
+            $turnitintool->excludevalue = backup_todb($info['MOD']['#']['EXCLUDEVALUE']['0']['#']);
+            $turnitintool->excludetype = backup_todb($info['MOD']['#']['EXCLUDETYPE']['0']['#']);
+        }
 
-		if (is_callable(array($DB,'insert_record'))) {
-			$newid = $DB->insert_record("turnitintool",$turnitintool);
-		} else {
-			$newid = insert_record("turnitintool",$turnitintool);
-		}
+        // Add exclude small matches data if present in backup file
+        if (isset($info['MOD']['#']['ERATER']['0']['#'])) {
+            $turnitintool->erater = backup_todb($info['MOD']['#']['ERATER']['0']['#']);
+            $turnitintool->erater_handbook = backup_todb($info['MOD']['#']['ERATERHANDBOOK']['0']['#']);
+            $turnitintool->erater_dictionary = backup_todb($info['MOD']['#']['ERATERDICTIONARY']['0']['#']);
+            $turnitintool->erater_spelling = backup_todb($info['MOD']['#']['ERATERSPELLING']['0']['#']);
+            $turnitintool->erater_grammar = backup_todb($info['MOD']['#']['ERATERGRAMMAR']['0']['#']);
+            $turnitintool->erater_usage = backup_todb($info['MOD']['#']['ERATERUSAGE']['0']['#']);
+            $turnitintool->erater_mechanics = backup_todb($info['MOD']['#']['ERATERMECHANICS']['0']['#']);
+            $turnitintool->erater_style = backup_todb($info['MOD']['#']['ERATERSTYLE']['0']['#']);
+        }
 
-		// Recreate the turnitintool_parts entries
-		$newpartids = array();
-		foreach ($info['MOD']['#']['PARTS']['0']['#']['PART'] as $partarray) {
+        if (is_callable(array($DB,'insert_record'))) {
+            $newid = $DB->insert_record("turnitintool",$turnitintool);
+        } else {
+            $newid = insert_record("turnitintool",$turnitintool);
+        }
 
-			$part->turnitintoolid = $newid;
-			$part->partname = backup_todb($partarray['#']['PARTNAME']['0']['#']);
-			$part->tiiassignid = backup_todb($partarray['#']['TIIASSIGNID']['0']['#']);
-			$part->dtstart = backup_todb($partarray['#']['DTSTART']['0']['#']);
-			$part->dtdue = backup_todb($partarray['#']['DTDUE']['0']['#']);
-			$part->dtpost = backup_todb($partarray['#']['DTPOST']['0']['#']);
-			$part->maxmarks = backup_todb($partarray['#']['MAXMARKS']['0']['#']);
-			$part->deleted = backup_todb($partarray['#']['DELETED']['0']['#']);
+        // Recreate the turnitintool_parts entries
+        $newpartids = array();
+        foreach ($info['MOD']['#']['PARTS']['0']['#']['PART'] as $partarray) {
 
-			$oldpartid = backup_todb($partarray['#']['ID']['0']['#']);
-			unset($part->id);
-			if (is_callable(array($DB,'insert_record'))) {
-				$newpartid = $DB->insert_record("turnitintool_parts",$part);
-			} else {
-				$newpartid = insert_record("turnitintool_parts",$part);
-			}
-			$newpartids[$oldpartid] = $newpartid;
-		}
+            $part->turnitintoolid = $newid;
+            $part->partname = backup_todb($partarray['#']['PARTNAME']['0']['#']);
+            $part->tiiassignid = backup_todb($partarray['#']['TIIASSIGNID']['0']['#']);
+            $part->dtstart = backup_todb($partarray['#']['DTSTART']['0']['#']);
+            $part->dtdue = backup_todb($partarray['#']['DTDUE']['0']['#']);
+            $part->dtpost = backup_todb($partarray['#']['DTPOST']['0']['#']);
+            $part->maxmarks = backup_todb($partarray['#']['MAXMARKS']['0']['#']);
+            $part->deleted = backup_todb($partarray['#']['DELETED']['0']['#']);
 
-		if (!defined('RESTORE_SILENTLY')) {
-			echo "<li>".get_string("modulename","turnitintool")." \"".format_string(stripslashes($turnitintool->name),true)."\"</li>";
-		}
-		backup_flush(300);
+            $oldpartid = backup_todb($partarray['#']['ID']['0']['#']);
+            unset($part->id);
+            if (is_callable(array($DB,'insert_record'))) {
+                $newpartid = $DB->insert_record("turnitintool_parts",$part);
+            } else {
+                $newpartid = insert_record("turnitintool_parts",$part);
+            }
+            $newpartids[$oldpartid] = $newpartid;
+        }
 
-		if ($newid) {
-			backup_putid($restore->backup_unique_code,$mod->modtype,
-			$mod->id, $newid);
-			if (restore_userdata_selected($restore,'turnitintool',$mod->id)) {
-				$status = turnitintool_submissions_restore_mods($mod->id, $newid, $newpartids, $info, $restore) && $status;
-			}
-		} else {
-			$status = false;
-		}
-	} else {
-		$status = false;
-	}
-	return $status;
+        if (!defined('RESTORE_SILENTLY')) {
+            echo "<li>".get_string("modulename","turnitintool")." \"".format_string(stripslashes($turnitintool->name),true)."\"</li>";
+        }
+        backup_flush(300);
+
+        if ($newid) {
+            backup_putid($restore->backup_unique_code,$mod->modtype,
+            $mod->id, $newid);
+            if (restore_userdata_selected($restore,'turnitintool',$mod->id)) {
+                $status = turnitintool_submissions_restore_mods($mod->id, $newid, $newpartids, $info, $restore) && $status;
+            }
+        } else {
+            $status = false;
+        }
+    } else {
+        $status = false;
+    }
+    return $status;
 }
 
 function turnitintool_submissions_restore_mods($old_turnitintool_id, $new_turnitintool_id, $newpartids, $info, $restore) {
@@ -215,7 +215,7 @@ function turnitintool_submissions_restore_mods($old_turnitintool_id, $new_turnit
     } else {
         $submissions = array();
     }
-    
+
     //Iterate over submissions
     for($i = 0; $i < sizeof($submissions); $i++) {
         $sub_info = $submissions[$i];
@@ -301,7 +301,7 @@ function turnitintool_submissions_restore_mods($old_turnitintool_id, $new_turnit
                         $newcommentid = insert_record("turnitintool_comments",$comment);
                     }
                 }
-                
+
             }
         }
 

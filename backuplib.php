@@ -68,7 +68,7 @@ function turnitintool_backup_one_mod($bf,$preferences,$turnitintool) {
     fwrite ($bf,full_tag("EXCLUDEQUOTED",4,false,$turnitintool->excludequoted));
     fwrite ($bf,full_tag("EXCLUDEVALUE",4,false,$turnitintool->excludevalue));
     fwrite ($bf,full_tag("EXCLUDETYPE",4,false,$turnitintool->excludetype));
-    
+
     fwrite ($bf,full_tag("ERATER",4,false,$turnitintool->erater));
     fwrite ($bf,full_tag("ERATERHANDBOOK",4,false,$turnitintool->erater_handbook));
     fwrite ($bf,full_tag("ERATERDICTIONARY",4,false,$turnitintool->erater_dictionary));

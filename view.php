@@ -88,10 +88,24 @@ $param_s=optional_param('s',null,PARAM_CLEAN);
 $param_ob=optional_param('ob',null,PARAM_CLEAN);
 $param_sh=optional_param('sh',null,PARAM_CLEAN);
 $param_fr=optional_param('fr',null,PARAM_CLEAN);
+$param_export_data=optional_param('export_data',null,PARAM_CLEAN);
+$param_objectid=optional_param('objectid',null,PARAM_CLEAN);
+$param_partid=optional_param('partid',null,PARAM_CLEAN);
+$param_utp=optional_param('utp',null,PARAM_CLEAN);
 
+// Clean the post array so we can pass it into the functions below
+$post = array();
+foreach ( $_POST as $key => $value ) {
+    // If 1.9 use clean_param to clean an array  / if 2.0 use clean_param_array
+    if ( is_array( $value ) AND is_callable( 'clean_param_array' ) ) {
+        $post[$key] = clean_param_array( $value, PARAM_CLEAN );
+    } else {
+        $post[$key] = clean_param( $value, PARAM_CLEAN );
+    }
+}
 
 if (!is_null($param_jumppage)) {
-    turnitintool_url_jumpto($param_userid,$param_jumppage,unserialize(stripslashes(urldecode($param_post))),$turnitintool);
+    turnitintool_url_jumpto($param_userid,$param_jumppage,$turnitintool,$param_utp,$param_objectid,$param_partid,$param_export_data);
     exit();
 }
 
@@ -160,15 +174,15 @@ if (!is_null($param_do) AND $param_do=="changeowner") {
 
 if (!is_null($param_do) AND $turnitintool->autoupdates==1 AND $param_do=="allsubmissions" AND !is_null($param_anonid)) {
     $loaderbar = new turnitintool_loaderbarclass(3);
-    turnitintool_revealuser($cm,$turnitintool,$_POST,$loaderbar);
+    turnitintool_revealuser($cm,$turnitintool,$post,$loaderbar);
     turnitintool_update_all_report_scores($cm,$turnitintool,2,$loaderbar);
     $_SESSION["updatedcount"]=(!isset($_SESSION["updatedcount"])) ? 1 : $_SESSION["updatedcount"]++;
     turnitintool_redirect($CFG->wwwroot.'/mod/turnitintool/view.php?id='.$cm->id.'&do=allsubmissions');
     exit();
 }
 
-if (!is_null($param_updategrade) OR isset($_POST['updategrade']) OR isset($_POST["updategrade_x"])) {
-    turnitintool_update_grades($cm,$turnitintool,$_POST);
+if (!is_null($param_updategrade) OR isset($post['updategrade']) OR isset($post["updategrade_x"])) {
+    turnitintool_update_grades($cm,$turnitintool,$post);
 }
 
 if (!is_null($param_up)) { // Manual Submission to Turnitin
@@ -188,9 +202,9 @@ if (!is_null($param_submissiontype) AND $param_do=='submissions') {
     }
 
     if ($param_submissiontype==1) {
-        $notice=turnitintool_dofileupload($cm,$turnitintool,$thisuserid,$_REQUEST);
+        $notice=turnitintool_dofileupload($cm,$turnitintool,$thisuserid,$post);
     } else if ($param_submissiontype==2) {
-        $notice=turnitintool_dotextsubmission($cm,$turnitintool,$thisuserid,$_REQUEST);
+        $notice=turnitintool_dotextsubmission($cm,$turnitintool,$thisuserid,$post);
     }
     if ($turnitintool->autosubmission AND !empty($notice["subid"])) {
         if (!$submission = turnitintool_get_record('turnitintool_submissions','id',$notice["subid"])) {
@@ -203,7 +217,7 @@ if (!is_null($param_submissiontype) AND $param_do=='submissions') {
 }
 
 if (!is_null($param_submitted) AND $param_do=='intro') {
-    $notice=turnitintool_update_partnames($cm,$turnitintool,$_POST);
+    $notice=turnitintool_update_partnames($cm,$turnitintool,$post);
 }
 
 if (!is_null($param_delpart) AND $param_do=='intro') {
@@ -211,11 +225,11 @@ if (!is_null($param_delpart) AND $param_do=='intro') {
 }
 
 if (!is_null($param_submitted) AND $param_do=='notes') {
-    $notice=turnitintool_process_notes($cm,$turnitintool,$param_s,$_POST);
+    $notice=turnitintool_process_notes($cm,$turnitintool,$param_s,$post);
 }
 
 if (!is_null($param_submitted) AND $param_do=='options') {
-    $notice=turnitintool_process_options($cm,$turnitintool,$_POST);
+    $notice=turnitintool_process_options($cm,$turnitintool,$post);
 }
 
 if (!is_null($param_do) AND $turnitintool->autoupdates==1 AND ($param_do=='allsubmissions' OR $param_do=='submissions')) {
@@ -315,18 +329,26 @@ if ($do=='intro') {
     } else {
         $notice=NULL;
     }
+    // Update the GradeBook to make sure the grade stays 'hidden' until and wasn't revealed by modedit
+    turnitintool_grade_item_update( $turnitintool );
     echo turnitintool_duplicatewarning($cm,$turnitintool);
     echo turnitintool_introduction($cm,$turnitintool,$notice);
 }
 
 if ($do=='submissions') {
-    echo turnitintool_view_student_submissions($cm,$turnitintool);
-    if (isset($notice["error"])) {
-        turnitintool_box_start('generalbox boxwidthwide boxaligncenter error', 'errorbox');
-        echo $notice["error"];
-        turnitintool_box_end();
+    if ( !has_capability('mod/turnitintool:grade', get_context_instance(CONTEXT_MODULE, $cm->id)) 
+         AND !has_capability('mod/turnitintool:submit', get_context_instance(CONTEXT_MODULE, $cm->id))) {
+        turnitintool_print_error('permissiondeniederror','turnitintool');
+        exit();
+    } else {
+        echo turnitintool_view_student_submissions($cm,$turnitintool);
+        if (isset($notice["error"])) {
+            turnitintool_box_start('generalbox boxwidthwide boxaligncenter error', 'errorbox');
+            echo $notice["error"];
+            turnitintool_box_end();
+        }
+        echo turnitintool_view_submission_form($cm,$turnitintool);
     }
-    echo turnitintool_view_submission_form($cm,$turnitintool);
 }
 
 if ($do=='allsubmissions') {
@@ -344,7 +366,7 @@ if ($do=='allsubmissions') {
 }
 
 if ($do=='notes') {
-    echo turnitintool_view_notes($cm,$turnitintool,$param_s,$_POST);
+    echo turnitintool_view_notes($cm,$turnitintool,$param_s,$post);
     if (isset($notice['error'])) {
         turnitintool_box_start('generalbox boxwidthwide boxaligncenter error', 'errorbox');
         echo $notice['message'];
@@ -352,7 +374,7 @@ if ($do=='notes') {
     } else {
         $notice=NULL;
     }
-    echo turnitintool_addedit_notes($cm,$turnitintool,$param_s,$_POST,$notice);
+    echo turnitintool_addedit_notes($cm,$turnitintool,$param_s,$post,$notice);
 
 }
 
@@ -382,8 +404,8 @@ $module=turnitintool_get_record('modules','name','turnitintool');
 $parts=turnitintool_get_records('turnitintool_parts','turnitintoolid',$turnitintool->id);
 $parts_string="(";
 foreach ($parts as $part) {
-	$parts_string.=($parts_string!="(") ? " | " : "";
-	$parts_string.= $part->partname.': '.$part->tiiassignid;
+    $parts_string.=($parts_string!="(") ? " | " : "";
+    $parts_string.= $part->partname.': '.$part->tiiassignid;
 }
 $parts_string.=")";
 echo '<!-- Turnitin Moodle Direct Version: '.$module->version.' - '.$parts_string.' -->';

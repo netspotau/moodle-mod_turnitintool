@@ -50,7 +50,7 @@ class backup_turnitintool_activity_structure_step extends backup_activity_struct
             'gradedisplay', 'autoupdates', 'commentedittime', 'commentmaxsize',
             'autosubmission', 'shownonsubmission', 'excludebiblio', 'excludequoted',
             'excludevalue', 'excludetype', 'erater', 'erater_handbook', 'erater_dictionary',
-        	'erater_spelling', 'erater_grammar', 'erater_usage', 'erater_mechanics', 'erater_style'
+            'erater_spelling', 'erater_grammar', 'erater_usage', 'erater_mechanics', 'erater_style'
         ));
 
         $parts = new backup_nested_element('parts');
@@ -89,7 +89,7 @@ class backup_turnitintool_activity_structure_step extends backup_activity_struct
         $turnitintool->add_child($parts);
         $turnitintool->add_child($course);
         $turnitintool->add_child($submissions);
-        
+
         // Define sources
         $turnitintool->set_source_table('turnitintool', array('id' => backup::VAR_ACTIVITYID));
         $values['tiiaccount']=$CFG->turnitin_account_id;
@@ -98,9 +98,9 @@ class backup_turnitintool_activity_structure_step extends backup_activity_struct
         $part->set_source_table('turnitintool_parts', array('turnitintoolid' => backup::VAR_ACTIVITYID));
 
         $course->set_source_sql('
-            SELECT  t.id, t.courseid, t.ownerid, tu.turnitin_uid ownertiiuid,
-                    u.email owneremail, u.firstname ownerfn, u.lastname ownerln,
-                    u.username ownerun, t.turnitin_ctl, t.turnitin_cid
+            SELECT  t.id, t.courseid, t.ownerid, tu.turnitin_uid AS ownertiiuid,
+                    u.email AS owneremail, u.firstname AS ownerfn, u.lastname AS ownerln,
+                    u.username AS ownerun, t.turnitin_ctl, t.turnitin_cid
               FROM {turnitintool_courses} t, {user} u, {turnitintool_users} tu
              WHERE t.ownerid=u.id AND tu.userid=t.ownerid AND t.courseid = ?',
             array(backup::VAR_COURSEID));
@@ -110,7 +110,7 @@ class backup_turnitintool_activity_structure_step extends backup_activity_struct
             $comment->set_source_table('turnitintool_comments', array('submissionid' => '../../id'));
             //$submission->set_source_table('turnitintool_submissions', array('turnitintoolid' => '../../id'));
             $submission->set_source_sql('
-            SELECT  s.*, tu.turnitin_uid tiiuserid
+            SELECT  s.*, tu.turnitin_uid AS tiiuserid
               FROM {turnitintool_submissions} s, {turnitintool_users} tu
              WHERE s.userid=tu.userid AND s.turnitintoolid = ?',
             array(backup::VAR_ACTIVITYID));

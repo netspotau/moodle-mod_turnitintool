@@ -116,7 +116,7 @@
         }
 
         $link = '<a'.$dimmed.' href="view.php?id='.$turnitintool->coursemodule.'">'.$turnitintool->name.'</a>';
-        $part=turnitintool_get_record_select('turnitintool_parts','turnitintoolid='.$turnitintool->id.' AND deleted=0','MIN(dtstart) dtstart');
+        $part=turnitintool_get_record_select('turnitintool_parts','turnitintoolid='.$turnitintool->id.' AND deleted=0','MIN(dtstart) AS dtstart');
         $dtstart = '<span'.$dimmed.'>'.userdate($part->dtstart,get_string('strftimedatetimeshort','langconfig')).'</span>';
         $partcount=turnitintool_count_records_select('turnitintool_parts','turnitintoolid='.$turnitintool->id.' AND deleted=0');
 		if (has_capability('mod/turnitintool:grade', get_context_instance(CONTEXT_MODULE, $turnitintool->coursemodule))) {
