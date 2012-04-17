@@ -11,7 +11,7 @@ defined("TII_ENCRYPT") or define("TII_ENCRYPT","0");
 /**
  * The pause in between API calls
  */
-defined("TII_LATENCY_SLEEP") or define("TII_LATENCY_SLEEP","4");
+defined("TII_LATENCY_SLEEP") or define("TII_LATENCY_SLEEP","0");
 /**
  * API Error: Start Error Code
  */
