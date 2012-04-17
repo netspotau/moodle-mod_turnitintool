@@ -4398,6 +4398,13 @@ function turnitintool_update_all_report_scores($cm,$turnitintool,$trigger,&$load
                         $ids=array();
                     }
                     unset($inserts);
+
+                    $submitusers = get_users_by_capability(get_context_instance(CONTEXT_MODULE, $cm->id), 'mod/turnitintool:submit', 'u.id', '', '', '', '', '', false);
+                    $submituserids = array();
+                    foreach ($submitusers as $user) {
+                        $submituserids[$user->id] = true;
+                    }
+
                     $inserts=array();
                     foreach ($resultArray as $key => $value) {
 
@@ -4431,7 +4438,7 @@ function turnitintool_update_all_report_scores($cm,$turnitintool,$trigger,&$load
 
                         if ($userdata=turnitintool_get_record('turnitintool_users','turnitin_uid',$value["userid"])
                                 AND
-                                has_capability('mod/turnitintool:submit', get_context_instance(CONTEXT_MODULE, $cm->id), $userdata->userid)) {
+                                isset($submituserids[$userdata->userid]) AND $submituserids[$userdata->userid] === true) {
                             // If returned userid is already stored and the user is enrolled on the course
                             // we can use real Moodle user to store against
                             $insert->submission_nmuserid=0;
