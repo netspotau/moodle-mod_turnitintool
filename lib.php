@@ -4663,9 +4663,15 @@ function turnitintool_update_choice_cookie($turnitintool) {
             $nmuserid=str_replace('nm-','',$userCookieArray[$i]);
             $numsubmissions = turnitintool_count_records('turnitintool_submissions','submission_nmuserid',$nmuserid,'turnitintoolid',$turnitintool->id);
         } else if (!$turnitintool->anon) {
-            $numsubmissions = turnitintool_count_records('turnitintool_submissions','userid',$userCookieArray[$i],'turnitintoolid',$turnitintool->id);
+            $where = '';
+            if (!isset($userCookieArray[$i]) && !empty($userCookieArray[$i])) {
+                $where = "userid='{$userCookieArray[$i]}' AND ";
+            }
+            $where .= "turnitintoolid='{$turnitintool->id}'";
+            $numsubmissions = turnitintool_count_records_select('turnitintool_submissions', $where);
         } else {
-            $nmsubmissions = turnitintool_count_records('turnitintool_submissions','submission_part',$userCookieArray[$i],'turnitintoolid',$turnitintool->id,'userid',0);
+            $where = "submission_part='{$userCookieArray[$i]}' AND turnitintoolid='{$turnitintool->id}' AND userid=0";
+            $nmsubmissions = turnitintool_count_records_select('turnitintool_submissions', $where);
             $cm=get_coursemodule_from_instance('turnitintool',$turnitintool->id,$turnitintool->course);
             $context = get_context_instance(CONTEXT_MODULE, $cm->id);
             $studentusers=get_users_by_capability($context,'mod/turnitintool:submit','u.id','','','','','',false);
