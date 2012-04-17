@@ -1908,12 +1908,8 @@ function turnitintool_ownerprocess($cm,$turnitintool,$newid) {
     if ($newid!='NULL') {
 
         $context = get_context_instance(CONTEXT_MODULE, $cm->id);
-        $isadmin=false;
-        if (has_capability('moodle/site:config',get_context_instance(CONTEXT_SYSTEM))) {
-            $isadmin=true;
-        }
-        $allusers=get_users_by_capability($context, 'mod/turnitintool:grade', "u.id AS id", '', '', '', 0, '', true);
-        if (!isset($allusers[$newid]) AND !$isadmin) {
+        $allusers=get_users_by_capability($context, 'mod/turnitintool:grade', "u.id AS id", '', '', '', '', '', false);
+        if (!isset($allusers[$newid])) {
             turnitintool_print_error('permissiondeniederror','turnitintool',NULL,NULL,__FILE__,__LINE__);
             exit();
 
