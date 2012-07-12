@@ -54,7 +54,7 @@
 /// Get all the appropriate data
 
     if (! $turnitintools = get_all_instances_in_course("turnitintool", $course)) {
-        notice("There are no ".$strturnitintools, "../../course/view.php?id=$course->id");
+        notice("There are no ".$strturnitintools, $CFG->wwwroot."/course/view.php?id=$course->id");
         die;
     }
 
