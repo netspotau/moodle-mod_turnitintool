@@ -7,7 +7,20 @@
 
 
 $capabilities = array(
+    
+    'mod/turnitintool:addinstance' => array(
 
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => array(
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW
+        ),
+        'clonepermissionsfrom' => 'moodle/course:manageactivities'
+        
+    ),
+    
     'mod/turnitintool:view' => array(
 
         'captype' => 'read',
@@ -38,6 +51,7 @@ $capabilities = array(
             'editingteacher' => CAP_ALLOW
         )
     )
+        
 );
 
 // Check for version older than 2.0

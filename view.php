@@ -6,12 +6,12 @@
 
 require_once("../../config.php");
 require_once("lib.php");
-require_once("../../lib/formslib.php");
-require_once("../../lib/form/text.php");
-require_once("../../lib/form/datetimeselector.php");
-require_once("../../lib/form/hidden.php");
-require_once("../../lib/form/button.php");
-require_once("../../lib/form/submit.php");
+require_once($CFG->libdir."/formslib.php");
+require_once($CFG->libdir."/form/text.php");
+require_once($CFG->libdir."/form/datetimeselector.php");
+require_once($CFG->libdir."/form/hidden.php");
+require_once($CFG->libdir."/form/button.php");
+require_once($CFG->libdir."/form/submit.php");
 if (!turnitintool_check_config()) {
     turnitintool_print_error('configureerror','turnitintool',NULL,NULL,__FILE__,__LINE__);
     exit();
@@ -238,11 +238,7 @@ if (!is_null($param_do) AND $turnitintool->autoupdates==1 AND ($param_do=='allsu
     } else {
         $getuser=NULL;
     }
-    $peruser=false;
-    if (!isset($_SESSION['updatedscores'][$turnitintool->id]) OR $_SESSION['updatedscores'][$turnitintool->id]==0) {
-        $loaderbar = new turnitintool_loaderbarclass(2);
-    }
-    if (turnitintool_update_all_report_scores($cm,$turnitintool,0,$loaderbar)) {
+    if (turnitintool_update_all_report_scores($cm,$turnitintool,0)) {
         turnitintool_redirect($CFG->wwwroot.'/mod/turnitintool/view.php?id='.$cm->id.'&do='.$param_do);
     }
 }
