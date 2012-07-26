@@ -9,7 +9,7 @@ require_once($CFG->dirroot.'/mod/turnitintool/version.php');
 
 global $RESOURCE_WINDOW_OPTIONS;
 
-$upgrade = turnitintool_updateavailable( $module );
+$upgrade = null; // We are not going to be curling TII's servers every page load...
 $upgradeavailable = ( is_null( $upgrade ) ) ? '' : ' <a href="'.$upgrade.'"><i><b>'.get_string('upgradeavailable','turnitintool').'</b></i></a> ';
 
 $toplinks = '<div><a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php">'.get_string("connecttest", "turnitintool")
