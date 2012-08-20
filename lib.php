@@ -1492,8 +1492,10 @@ function turnitintool_introduction($cm,$turnitintool,$notice='') {
         exit();
     }
 
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     if ($part->dtstart < time() OR has_capability('mod/turnitintool:grade', get_context_instance(CONTEXT_MODULE, $cm->id))) {
         $intro=$turnitintool->intro;
+        $intro = file_rewrite_pluginfile_urls($intro, 'pluginfile.php', $context->id, 'mod_turnitintool', 'intro', null);
     } else {
         $intro=get_string('notavailableyet','turnitintool');
     }
@@ -1505,7 +1507,6 @@ function turnitintool_introduction($cm,$turnitintool,$notice='') {
     $cells[1]->class='cell c1';
     $table->rows[]->cells=$cells;
 
-    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     if (has_capability('mod/turnitintool:grade', $context)) {
         unset($cells);
         $cells[0]->data=get_string('turnitintutors','turnitintool');
