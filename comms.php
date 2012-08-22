@@ -64,14 +64,6 @@ class turnitintool_commclass {
      */
     var $curlerror;
     /**
-     * A backward compatible constructor / destructor method that works in PHP4 to emulate the PHP5 magic method __construct
-     */
-    function turnitintool_commclass($iUid,$iUfn,$iUln,$iUem,$iUtp,&$iLoaderBar) {
-        if (version_compare(PHP_VERSION,"5.0.0","<")) {
-            $this->__construct($iUid,$iUfn,$iUln,$iUem,$iUtp,$iLoaderBar);
-        }
-    }
-    /**
      * The constructor for the class, Calls the startsession() method if we are using sessions
      *
      * @param int $iUid The User ID passed in the class creation call

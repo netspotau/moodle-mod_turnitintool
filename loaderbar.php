@@ -19,15 +19,6 @@ class turnitintool_loaderbarclass {
      * @var int $starttime The object start time represented by a unix timestamp
      */
     var $starttime;
-	/**
-	 * A backward compatible constructor / destructor method that works in PHP4 to emulate the PHP5 magic method __construct
-	 */
-    function turnitintool_loaderbarclass(){
-        if (version_compare(PHP_VERSION,"5.0.0","<")) {
-            $argcv = func_get_args();
-            call_user_func_array(array(&$this, '__construct'), $argcv);
-        }
-    }
     /**
      * The constructor for the class, Calls the startloader() method
      * 

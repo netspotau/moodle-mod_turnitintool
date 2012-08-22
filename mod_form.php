@@ -22,6 +22,7 @@ class mod_turnitintool_mod_form extends moodleform_mod {
             $mform->setType('name', PARAM_CLEAN);
         }
         $mform->addRule('name', null, 'required', null, 'client');
+        $input = new stdClass();
         $input->length=40;
         $input->field=get_string('turnitintoolname','turnitintool');
         $mform->addRule('name', get_string('maxlength','turnitintool',$input), 'maxlength', 40, 'client');
