@@ -19,6 +19,7 @@ class turnitintool_loaderbarclass {
      * @var int $starttime The object start time represented by a unix timestamp
      */
     var $starttime;
+
     /**
      * The constructor for the class, Calls the startloader() method
      * 
@@ -47,7 +48,7 @@ class turnitintool_loaderbarclass {
                 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
                 </head>
 		<body></body>
-		<script type="text/javascript" src="'.$CFG->wwwroot.'/mod/turnitintool/loaderbar.js"></script>
+		<script type="text/javascript" src="'.$CFG->wwwroot.'/mod/turnitintool/scripts/loaderbar.js"></script>
 		<script type="text/javascript" language="javascript">
 			function updateLoader(proc,total,percentdone,timeleft,status) {
 				headText.innerHTML=\''.get_string('turnitinloading','turnitintool').'\';
