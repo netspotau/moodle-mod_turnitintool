@@ -9,6 +9,13 @@ require_once($CFG->dirroot.'/mod/turnitintool/version.php');
 
 global $RESOURCE_WINDOW_OPTIONS;
 
+/**
+ * @see https://tracker.moodle.org/browse/CONTRIB-4138
+ */
+if (!isset($module->version) && isset($module->versiondb)) {
+    $module->version = $module->versiondb;
+}
+
 $upgrade = turnitintool_updateavailable( $module );
 $upgradeavailable = ( is_null( $upgrade ) ) ? '' : ' <a href="'.$upgrade.'"><i><b>'.get_string('upgradeavailable','turnitintool').'</b></i></a> ';
 
@@ -22,7 +29,7 @@ if (is_callable("get_file_storage")) {
     $toplinks .= '</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=files">'.get_string("files", "turnitintool");
 }
 
-$toplinks .= '</a> - ('.get_string('moduleversion','turnitintool').': '.$module->version . $upgradeavailable . ')</div>';
+$toplinks .= '</a> - ('.get_string('moduleversion','turnitintool').': '. $module->version . $upgradeavailable . ')</div>';
 
 $settings->add(new admin_setting_heading('turnitin_header', '', $toplinks));
 
